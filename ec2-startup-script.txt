@@ -1,0 +1,61 @@
+#!/bin/bash
+# Use this for your user data (script from top to bottom)
+# install httpd (Linux 2 version)
+yum update -y
+yum install -y httpd
+systemctl start httpd
+systemctl enable httpd
+
+# Get the IMDSv2 token
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+# Background the curl requests
+curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/local-ipv4 &> /tmp/local_ipv4 &
+curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone &> /tmp/az &
+curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/ &> /tmp/macid &
+wait
+
+macid=$(cat /tmp/macid)
+local_ipv4=$(cat /tmp/local_ipv4)
+az=$(cat /tmp/az)
+vpc=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/${macid}/vpc-id)
+
+echo "
+<!doctype html>
+<html lang=\"en\" class=\"h-100\">
+<head>
+<title>Details for EC2 instance</title>
+</head>
+<body>
+<div>
+<h1>AWS Instance Details</h1>
+<h1>Samurai Katana</h1>
+
+<br>
+# insert an image or GIF
+<img src="https://www.w3schools.com/images/w3schools_green.jpg" alt="W3Schools.com">
+<br>
+
+<p><b>Instance Name:</b> $(hostname -f) </p>
+<p><b>Instance Private Ip Address: </b> ${local_ipv4}</p>
+<p><b>Availability Zone: </b> ${az}</p>
+<p><b>Virtual Private Cloud (VPC):</b> ${vpc}</p>
+</div>
+
+<div>
+<p>I, Anthony V. Gibby, give thanks to Theo WAF for providing me the opportunity to become apart of the 1% by teaching me about EC2s in AWS, and the concepts of cloud architect overall. One step closer to escaping Keisha!</p>
+<p>With this class, I will net a minimum $250k per year!</p>
+<p>I found my wives on a party yacht in Thailand! Their names shall not be mentions because I don't need of you thirsty A-Holes trying to track down my fine ass wives! 🤣🤣🤣</p>
+
+<h3>Brazil</h3>
+<img src="https://imgs.search.brave.com/Stuurm94Q3Xdy5EnguENYW_Y2lmq00HtLCrQUR14xS0/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTQw/NTMwNzA5Mi9waG90/by9zbWlsaW5nLWJs/YWNrLXdvbWFuLWlu/LXRoZS1jaXR5Lmpw/Zz9zPTYxMng2MTIm/dz0wJms9MjAmYz1l/VXg0eE5qSm1YcnBQ/WjNfRk1hd0VJb3lV/cXBlVEExUVVKZXBw/SlBVTDRRPQ" alt="Beautiful Brazillian Woman" class="fine-women"/>
+<img src="https://t4.ftcdn.net/jpg/06/21/28/23/360_F_621282359_HmzmhHGdk9zEH4VJRZUrLX0kJcZBNiGH.jpg" alt="Beautiful Brazillian Woman" class="fine-women"/>
+<img src="https://t3.ftcdn.net/jpg/08/13/58/06/360_F_813580657_f870ixiDfNF4RoHhMsvGi6P6Fru3g5Yj.jpg" alt="Beautiful Brazillian Woman" class="fine-women"/>
+<img src="https://img.freepik.com/premium-photo/woman-adorned-vibrant-carnival-costume-with-elaborate-makeup-feathered-headgear_29120-6374.jpg" alt="Beautiful Brazillian Woman" class="fine-women"/>
+</div>
+</body>
+</html>
+" > /var/www/html/index.html
+
+# Clean up the temp files
+rm -f /tmp/local_ipv4 /tmp/az /tmp/macid
